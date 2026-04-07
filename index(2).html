@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Pixel Battle</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(15, 23, 42, 0.82);
+      --panel2: rgba(30, 41, 59, 0.72);
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #60a5fa;
+      --border: rgba(148,163,184,0.2);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at top, #12203f 0%, #070b16 65%, #04060d 100%);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    #app {
+      position: fixed;
+      inset: 0;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    .hud {
+      position: fixed;
+      left: 14px;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .card {
+      pointer-events: auto;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 40px rgba(0,0,0,.32);
+      border-radius: 16px;
+      padding: 10px 12px;
+    }
+    .brand {
+      font-weight: 800;
+      letter-spacing: .2px;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .muted { color: var(--muted); font-size: 13px; }
+    input[type="text"] {
+      width: 140px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,.75);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 8px 10px;
+      outline: none;
+    }
+    input[type="color"] {
+      width: 42px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+    }
+    button {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(96,165,250,.18), rgba(96,165,250,.08));
+      color: var(--text);
+      border-radius: 12px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    button:hover { border-color: rgba(96,165,250,.5); }
+    .status-dot {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: #ef4444;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .status-dot.ok { background: #22c55e; }
+    .panel-right {
+      margin-left: auto;
+      max-width: 100%;
+    }
+    .tip {
+      position: fixed;
+      left: 14px;
+      bottom: 14px;
+      max-width: 520px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .tip .card {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 8px;
+      color: var(--text);
+      background: rgba(15,23,42,.65);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="board"></canvas>
+
+    <div class="hud">
+      <div class="card row">
+        <div class="brand">Pixel Battle</div>
+        <div class="muted">GitHub Pages + Firebase</div>
+      </div>
+
+      <div class="card row">
+        <label class="row" style="gap:8px;">
+          <span class="muted">Цвет</span>
+          <input id="color" type="color" value="#ff3b7a" />
+        </label>
+
+        <label class="row" style="gap:8px;">
+          <span class="muted">Ник</span>
+          <input id="name" type="text" maxlength="20" placeholder="Марк" />
+        </label>
+
+        <button id="centerBtn" title="Вернуть камеру в центр">В центр</button>
+      </div>
+
+      <div class="card row panel-right">
+        <span id="authStatus"><span class="status-dot"></span>Подключение…</span>
+        <span class="muted" id="cooldownInfo">КД: —</span>
+        <span class="muted" id="coordsInfo">x: — y: —</span>
+      </div>
+    </div>
+
+    <div class="tip">
+      <div class="card">
+        ЛКМ — поставить пиксель. Зажми и тяни — перемещение. Колесо — зум. На одном аккаунте можно ставить новый пиксель раз в 10 секунд.
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signInAnonymously
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      collection,
+      query,
+      where,
+      orderBy,
+      onSnapshot,
+      runTransaction,
+      serverTimestamp,
+      getDoc,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+    // TODO: вставь сюда свой Firebase config из консоли Firebase.
+    const firebaseConfig = {
+      apiKey: "PASTE_HERE",
+      authDomain: "PASTE_HERE",
+      projectId: "PASTE_HERE",
+      appId: "PASTE_HERE",
+      storageBucket: "PASTE_HERE",
+      messagingSenderId: "PASTE_HERE"
+    };
+
+    const WORLD = {
+      width: 5000,
+      height: 5000,
+      cell: 8,
+      cooldownMs: 10_000
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const canvas = document.getElementById("board");
+    const ctx = canvas.getContext("2d", { alpha: false });
+
+    const colorInput = document.getElementById("color");
+    const nameInput = document.getElementById("name");
+    const centerBtn = document.getElementById("centerBtn");
+    const authStatus = document.getElementById("authStatus");
+    const cooldownInfo = document.getElementById("cooldownInfo");
+    const coordsInfo = document.getElementById("coordsInfo");
+
+    const state = {
+      uid: null,
+      userRef: null,
+      scale: 1,
+      panX: 0,
+      panY: 0,
+      dragging: false,
+      dragStartX: 0,
+      dragStartY: 0,
+      dragPanX: 0,
+      dragPanY: 0,
+      mouseX: 0,
+      mouseY: 0,
+      hovered: null,
+      visiblePixels: new Map(),
+      unsubPixels: null,
+      lastCooldownAt: 0,
+      cooldownTimer: null,
+      redrawPending: false,
+      resubscribeTimer: null
+    };
+
+    const pxKey = (x, y) => `${x},${y}`;
+    const pixelDocId = (x, y) => `${x}_${y}`;
+    const userDocRef = (uid) => doc(db, "users", uid);
+    const pixelDocRef = (x, y) => doc(db, "pixels", pixelDocId(x, y));
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(window.innerWidth * dpr);
+      canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = "100vw";
+      canvas.style.height = "100vh";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      requestRender();
+    }
+
+    function worldToScreen(x, y) {
+      const cell = WORLD.cell * state.scale;
+      return {
+        x: state.panX + x * cell,
+        y: state.panY + y * cell
+      };
+    }
+
+    function screenToWorld(clientX, clientY) {
+      const cell = WORLD.cell * state.scale;
+      return {
+        x: Math.floor((clientX - state.panX) / cell),
+        y: Math.floor((clientY - state.panY) / cell)
+      };
+    }
+
+    function getViewportBounds() {
+      const cell = WORLD.cell * state.scale;
+      const left = Math.max(0, Math.floor((-state.panX) / cell) - 2);
+      const top = Math.max(0, Math.floor((-state.panY) / cell) - 2);
+      const right = Math.min(WORLD.width - 1, Math.ceil((window.innerWidth - state.panX) / cell) + 2);
+      const bottom = Math.min(WORLD.height - 1, Math.ceil((window.innerHeight - state.panY) / cell) + 2);
+      return { left, top, right, bottom };
+    }
+
+    function requestRender() {
+      if (state.redrawPending) return;
+      state.redrawPending = true;
+      requestAnimationFrame(() => {
+        state.redrawPending = false;
+        render();
+      });
+    }
+
+    function render() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      ctx.fillStyle = "#070b16";
+      ctx.fillRect(0, 0, w, h);
+
+      const cell = WORLD.cell * state.scale;
+      const bounds = getViewportBounds();
+
+      // Grid.
+      if (cell >= 4) {
+        ctx.strokeStyle = "rgba(148,163,184,0.08)";
+        ctx.lineWidth = 1;
+
+        const startX = Math.floor(bounds.left / 10) * 10;
+        const startY = Math.floor(bounds.top / 10) * 10;
+
+        for (let x = startX; x <= bounds.right; x += 10) {
+          const sx = state.panX + x * cell;
+          ctx.beginPath();
+          ctx.moveTo(sx, 0);
+          ctx.lineTo(sx, h);
+          ctx.stroke();
+        }
+        for (let y = startY; y <= bounds.bottom; y += 10) {
+          const sy = state.panY + y * cell;
+          ctx.beginPath();
+          ctx.moveTo(0, sy);
+          ctx.lineTo(w, sy);
+          ctx.stroke();
+        }
+      }
+
+      // Pixels.
+      for (const [key, color] of state.visiblePixels.entries()) {
+        const [xStr, yStr] = key.split(",");
+        const x = Number(xStr);
+        const y = Number(yStr);
+        const sx = state.panX + x * cell;
+        const sy = state.panY + y * cell;
+        if (sx + cell < 0 || sy + cell < 0 || sx > w || sy > h) continue;
+        ctx.fillStyle = color;
+        ctx.fillRect(sx, sy, cell, cell);
+      }
+
+      // Outline for hovered cell.
+      if (state.hovered) {
+        const { x, y } = state.hovered;
+        const sx = state.panX + x * cell;
+        const sy = state.panY + y * cell;
+        ctx.strokeStyle = "rgba(255,255,255,0.95)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, cell, cell);
+      }
+
+      // Border around world edge.
+      const topLeft = worldToScreen(0, 0);
+      const bottomRight = worldToScreen(WORLD.width, WORLD.height);
+      ctx.strokeStyle = "rgba(96,165,250,0.18)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
+    }
+
+    function scheduleResubscribe() {
+      clearTimeout(state.resubscribeTimer);
+      state.resubscribeTimer = setTimeout(() => {
+        subscribeToVisiblePixels();
+      }, 180);
+    }
+
+    function subscribeToVisiblePixels() {
+      if (state.unsubPixels) {
+        state.unsubPixels();
+        state.unsubPixels = null;
+      }
+
+      const bounds = getViewportBounds();
+      const pixelsQ = query(
+        collection(db, "pixels"),
+        where("x", ">=", bounds.left),
+        where("x", "<=", bounds.right),
+        orderBy("x")
+      );
+
+      state.unsubPixels = onSnapshot(
+        pixelsQ,
+        (snapshot) => {
+          const next = new Map();
+          snapshot.forEach((d) => {
+            const p = d.data();
+            if (p.y < bounds.top || p.y > bounds.bottom) return;
+            next.set(pxKey(p.x, p.y), p.color || "#000000");
+          });
+          state.visiblePixels = next;
+          requestRender();
+        },
+        (err) => {
+          console.error(err);
+          authStatus.innerHTML = '<span class="status-dot"></span>Ошибка загрузки пикселей';
+        }
+      );
+    }
+
+    function updateHovered(clientX, clientY) {
+      const w = screenToWorld(clientX, clientY);
+      const inside = w.x >= 0 && w.y >= 0 && w.x < WORLD.width && w.y < WORLD.height;
+      state.hovered = inside ? w : null;
+      coordsInfo.textContent = inside ? `x: ${w.x} y: ${w.y}` : "x: — y: —";
+      requestRender();
+    }
+
+    function updateCooldownLabel() {
+      if (!state.lastCooldownAt) {
+        cooldownInfo.textContent = "КД: готов";
+        return;
+      }
+      const ms = Math.max(0, state.lastCooldownAt - Date.now());
+      cooldownInfo.textContent = ms > 0 ? `КД: ${(ms / 1000).toFixed(1)}с` : "КД: готов";
+    }
+
+    async function ensureUserDoc() {
+      if (!state.uid) return;
+      const ref = userDocRef(state.uid);
+      const snap = await getDoc(ref);
+      const displayName = (nameInput.value || localStorage.getItem("pixel_name") || "").trim().slice(0, 20);
+      if (!snap.exists()) {
+        await setDoc(ref, {
+          createdAt: serverTimestamp(),
+          lastPlacedAt: serverTimestamp(),
+          displayName
+        });
+      }
+    }
+
+    async function placePixel(x, y) {
+      if (!state.uid) return;
+
+      const color = colorInput.value;
+      const displayName = (nameInput.value || localStorage.getItem("pixel_name") || "").trim().slice(0, 20);
+      const now = Date.now();
+
+      if (now < state.lastCooldownAt) {
+        authStatus.innerHTML = `<span class="status-dot"></span>Подожди ${(Math.ceil((state.lastCooldownAt - now) / 100) / 10).toFixed(1)}с`;
+        return;
+      }
+
+      const uRef = userDocRef(state.uid);
+      const pRef = pixelDocRef(x, y);
+
+      try {
+        await runTransaction(db, async (tx) => {
+          const userSnap = await tx.get(uRef);
+
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            const lastPlacedAt = data.lastPlacedAt;
+            if (lastPlacedAt && typeof lastPlacedAt.toMillis === "function") {
+              const elapsed = Date.now() - lastPlacedAt.toMillis();
+              if (elapsed < WORLD.cooldownMs) {
+                throw new Error(`COOLDOWN:${WORLD.cooldownMs - elapsed}`);
+              }
+            }
+            tx.set(uRef, {
+              createdAt: data.createdAt || serverTimestamp(),
+              lastPlacedAt: serverTimestamp(),
+              displayName
+            }, { merge: true });
+          } else {
+            tx.set(uRef, {
+              createdAt: serverTimestamp(),
+              lastPlacedAt: serverTimestamp(),
+              displayName
+            });
+          }
+
+          tx.set(pRef, {
+            x,
+            y,
+            color,
+            uid: state.uid,
+            updatedAt: serverTimestamp()
+          });
+        });
+
+        state.lastCooldownAt = Date.now() + WORLD.cooldownMs;
+        updateCooldownLabel();
+        requestRender();
+      } catch (err) {
+        console.warn(err);
+        if (String(err?.message || "").startsWith("COOLDOWN:")) {
+          const left = Number(String(err.message).split(":")[1]);
+          state.lastCooldownAt = Date.now() + Math.max(0, left);
+          updateCooldownLabel();
+          return;
+        }
+        authStatus.innerHTML = '<span class="status-dot"></span>Не удалось поставить пиксель';
+      }
+    }
+
+    canvas.addEventListener("pointerdown", (e) => {
+      canvas.setPointerCapture(e.pointerId);
+      state.dragging = true;
+      state.dragStartX = e.clientX;
+      state.dragStartY = e.clientY;
+      state.dragPanX = state.panX;
+      state.dragPanY = state.panY;
+      state.mouseX = e.clientX;
+      state.mouseY = e.clientY;
+      updateHovered(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener("pointermove", (e) => {
+      state.mouseX = e.clientX;
+      state.mouseY = e.clientY;
+
+      if (state.dragging && (Math.abs(e.clientX - state.dragStartX) > 3 || Math.abs(e.clientY - state.dragStartY) > 3)) {
+        state.panX = state.dragPanX + (e.clientX - state.dragStartX);
+        state.panY = state.dragPanY + (e.clientY - state.dragStartY);
+        requestRender();
+      }
+
+      updateHovered(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener("pointerup", async (e) => {
+      const dragged = Math.abs(e.clientX - state.dragStartX) > 3 || Math.abs(e.clientY - state.dragStartY) > 3;
+      state.dragging = false;
+
+      if (!dragged) {
+        const w = screenToWorld(e.clientX, e.clientY);
+        if (w.x >= 0 && w.y >= 0 && w.x < WORLD.width && w.y < WORLD.height) {
+          await placePixel(w.x, w.y);
+          scheduleResubscribe();
+        }
+      } else {
+        scheduleResubscribe();
+      }
+    });
+
+    canvas.addEventListener("pointerleave", () => {
+      state.hovered = null;
+      requestRender();
+    });
+
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+
+      const oldScale = state.scale;
+      const factor = e.deltaY > 0 ? 0.92 : 1.08;
+      const newScale = Math.min(6, Math.max(0.35, oldScale * factor));
+
+      const worldBefore = screenToWorld(e.clientX, e.clientY);
+      state.scale = newScale;
+      const cell = WORLD.cell * state.scale;
+      state.panX = e.clientX - worldBefore.x * cell;
+      state.panY = e.clientY - worldBefore.y * cell;
+
+      requestRender();
+      scheduleResubscribe();
+    }, { passive: false });
+
+    centerBtn.addEventListener("click", () => {
+      state.scale = 1;
+      const cell = WORLD.cell * state.scale;
+      state.panX = (window.innerWidth - WORLD.width * cell) / 2;
+      state.panY = (window.innerHeight - WORLD.height * cell) / 2;
+      requestRender();
+      scheduleResubscribe();
+    });
+
+    nameInput.value = localStorage.getItem("pixel_name") || "";
+    nameInput.addEventListener("input", () => {
+      localStorage.setItem("pixel_name", nameInput.value.slice(0, 20));
+    });
+
+    window.addEventListener("resize", () => {
+      resize();
+      scheduleResubscribe();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "0") {
+        centerBtn.click();
+      }
+    });
+
+    setInterval(updateCooldownLabel, 100);
+
+    resize();
+    centerBtn.click();
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      state.uid = user.uid;
+      state.userRef = userDocRef(user.uid);
+      authStatus.innerHTML = '<span class="status-dot ok"></span>В сети';
+
+      try {
+        await ensureUserDoc();
+      } catch (err) {
+        console.warn(err);
+      }
+
+      subscribeToVisiblePixels();
+    });
+
+    signInAnonymously(auth).catch((err) => {
+      console.error(err);
+      authStatus.innerHTML = '<span class="status-dot"></span>Не удалось войти';
+    });
+  </script>
+</body>
+</html>
