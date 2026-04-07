@@ -122,7 +122,8 @@
     const WORLD_WIDTH = 5000;
     const WORLD_HEIGHT = 5000;
     const CELL_SIZE = 8;
-    const LOCAL_COOLDOWN_KEY = "pixelbattle:lastPlaceMs";
+    const LOCAL_COOLDOWN_KEY = "pixelbattle:lastPlaceMs:v2";
+    // =======================
 
     const firebaseConfig = {
       apiKey: "AIzaSyATSubLFyQuItEzMfW50X_05yPcJKCfXZM",
@@ -132,7 +133,6 @@
       messagingSenderId: "460219250813",
       appId: "1:460219250813:web:9043a9ae9b76d077b19914"
     };
-    // =======================
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -148,6 +148,7 @@
     const cooldownInfo = document.getElementById("cooldownInfo");
     const coordsInfo = document.getElementById("coordsInfo");
 
+    const storedCooldown = Number(localStorage.getItem(LOCAL_COOLDOWN_KEY) || 0);
     const state = {
       uid: null,
       scale: 1,
@@ -163,7 +164,7 @@
       unsubPixels: null,
       redrawPending: false,
       resubTimer: null,
-      cooldownUntil: Number(localStorage.getItem(LOCAL_COOLDOWN_KEY) || 0)
+      cooldownUntil: Number.isFinite(storedCooldown) ? storedCooldown : 0
     };
 
     const pxKey = (x, y) => `${x},${y}`;
@@ -335,7 +336,8 @@
       if (!snap.exists()) {
         await setDoc(ref, {
           createdAt: serverTimestamp(),
-          lastPlacedAt: serverTimestamp(),
+          lastPlacedClientMs: 0,
+          lastPlacedServerAt: serverTimestamp(),
           displayName
         });
       }
@@ -346,6 +348,7 @@
 
       if (Date.now() < state.cooldownUntil) return;
 
+      const nowMs = Date.now();
       const color = colorInput.value;
       const displayName = (nameInput.value || localStorage.getItem("pixel_name") || "").trim().slice(0, 20);
       const uRef = userDocRef(state.uid);
@@ -357,9 +360,10 @@
 
           if (userSnap.exists()) {
             const data = userSnap.data();
-            const lastPlacedAt = data.lastPlacedAt;
-            if (lastPlacedAt && typeof lastPlacedAt.toMillis === "function") {
-              const elapsed = Date.now() - lastPlacedAt.toMillis();
+            const lastPlacedClientMs = Number(data.lastPlacedClientMs || 0);
+
+            if (lastPlacedClientMs > 0) {
+              const elapsed = nowMs - lastPlacedClientMs;
               if (elapsed < COOLDOWN_MS) {
                 throw new Error(`COOLDOWN:${COOLDOWN_MS - elapsed}`);
               }
@@ -367,13 +371,15 @@
 
             tx.set(uRef, {
               createdAt: data.createdAt || serverTimestamp(),
-              lastPlacedAt: serverTimestamp(),
+              lastPlacedClientMs: nowMs,
+              lastPlacedServerAt: serverTimestamp(),
               displayName
             }, { merge: true });
           } else {
             tx.set(uRef, {
               createdAt: serverTimestamp(),
-              lastPlacedAt: serverTimestamp(),
+              lastPlacedClientMs: nowMs,
+              lastPlacedServerAt: serverTimestamp(),
               displayName
             });
           }
@@ -387,8 +393,7 @@
           });
         });
 
-        const now = Date.now();
-        state.cooldownUntil = now + COOLDOWN_MS;
+        state.cooldownUntil = nowMs + COOLDOWN_MS;
         localStorage.setItem(LOCAL_COOLDOWN_KEY, String(state.cooldownUntil));
         updateCooldownLabel();
         requestRender();
