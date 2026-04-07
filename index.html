@@ -8,45 +8,27 @@
     :root{
       --bg:#070b16;
       --panel:rgba(15,23,42,.82);
-      --panel2:rgba(30,41,59,.72);
       --text:#e5e7eb;
       --muted:#94a3b8;
-      --accent:#60a5fa;
       --border:rgba(148,163,184,.18);
       --good:#22c55e;
       --bad:#ef4444;
     }
     *{box-sizing:border-box}
     html,body{
-      margin:0;
-      width:100%;
-      height:100%;
-      overflow:hidden;
+      margin:0;width:100%;height:100%;overflow:hidden;
       background:radial-gradient(circle at top, #12203f 0%, #070b16 62%, #04060d 100%);
       color:var(--text);
       font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
-    canvas{
-      display:block;
-      width:100vw;
-      height:100vh;
-      cursor:crosshair;
-      touch-action:none;
-    }
+    canvas{display:block;width:100vw;height:100vh;cursor:crosshair;touch-action:none}
     .hud{
-      position:fixed;
-      inset:14px 14px auto 14px;
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      z-index:10;
-      pointer-events:none;
+      position:fixed; inset:14px 14px auto 14px;
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center; z-index:10; pointer-events:none;
     }
     .card{
       pointer-events:auto;
-      backdrop-filter:blur(14px);
-      -webkit-backdrop-filter:blur(14px);
+      backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
       background:var(--panel);
       border:1px solid var(--border);
       box-shadow:0 12px 40px rgba(0,0,0,.32);
@@ -57,63 +39,29 @@
     .brand{font-weight:800;letter-spacing:.2px}
     .muted{color:var(--muted);font-size:13px}
     input[type="text"]{
-      width:150px;
-      border:1px solid var(--border);
-      background:rgba(15,23,42,.75);
-      color:var(--text);
-      border-radius:12px;
-      padding:8px 10px;
-      outline:none;
+      width:150px;border:1px solid var(--border);background:rgba(15,23,42,.75);
+      color:var(--text);border-radius:12px;padding:8px 10px;outline:none;
     }
     input[type="color"]{
-      width:42px;
-      height:36px;
-      border:none;
-      background:transparent;
-      padding:0;
-      cursor:pointer;
+      width:42px;height:36px;border:none;background:transparent;padding:0;cursor:pointer;
     }
     button{
       border:1px solid var(--border);
       background:linear-gradient(180deg, rgba(96,165,250,.18), rgba(96,165,250,.08));
       color:var(--text);
-      border-radius:12px;
-      padding:8px 12px;
-      cursor:pointer;
+      border-radius:12px;padding:8px 12px;cursor:pointer;
     }
     button:hover{border-color:rgba(96,165,250,.5)}
     .panel-right{margin-left:auto;max-width:100%}
     .dot{
-      display:inline-block;
-      width:9px;height:9px;border-radius:999px;
-      background:var(--bad);
-      margin-right:8px;
-      vertical-align:middle;
+      display:inline-block;width:9px;height:9px;border-radius:999px;background:var(--bad);
+      margin-right:8px;vertical-align:middle;
     }
     .dot.ok{background:var(--good)}
     .tip{
-      position:fixed;
-      left:14px;
-      bottom:14px;
-      max-width:560px;
-      z-index:10;
-      pointer-events:none;
+      position:fixed; left:14px; bottom:14px; max-width:560px; z-index:10; pointer-events:none;
     }
-    .tip .card{
-      font-size:13px;
-      color:var(--muted);
-      line-height:1.45;
-    }
-    .kbd{
-      display:inline-block;
-      padding:1px 6px;
-      border:1px solid var(--border);
-      border-bottom-width:2px;
-      border-radius:8px;
-      color:var(--text);
-      background:rgba(15,23,42,.65);
-      font-size:12px;
-    }
+    .tip .card{font-size:13px;color:var(--muted);line-height:1.45}
   </style>
 </head>
 <body>
@@ -148,17 +96,13 @@
 
   <div class="tip">
     <div class="card">
-      ЛКМ — поставить пиксель. Зажми и тяни — перемещение. Колесо — зум. На одном аккаунте пиксель ставится раз в 10 секунд.
+      ЛКМ — поставить пиксель. Зажми и тяни — перемещение. Колесо — зум. КД меняется в переменной <b>COOLDOWN_MS</b> сверху в коде.
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-    import {
-      getAuth,
-      onAuthStateChanged,
-      signInAnonymously
-    } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
     import {
       getFirestore,
       doc,
@@ -173,22 +117,22 @@
       setDoc
     } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    // ВСТАВЬ СЮДА СВОЙ firebaseConfig ИЗ FIREBASE CONSOLE
-const firebaseConfig = {
-  apiKey: "AIzaSyATSubLFyQuItEzMfW50X_05yPcJKCfXZM",
-  authDomain: "nova-prospect-chat-2-1cb83.firebaseapp.com",
-  projectId: "nova-prospect-chat-2-1cb83",
-  storageBucket: "nova-prospect-chat-2-1cb83.firebasestorage.app",
-  messagingSenderId: "460219250813",
-  appId: "1:460219250813:web:9043a9ae9b76d077b19914"
-};
+    // ====== НАСТРОЙКИ ======
+    const COOLDOWN_MS = 10_000; // <-- меняй кд тут
+    const WORLD_WIDTH = 5000;
+    const WORLD_HEIGHT = 5000;
+    const CELL_SIZE = 8;
+    const LOCAL_COOLDOWN_KEY = "pixelbattle:lastPlaceMs";
 
-    const WORLD = {
-      width: 5000,
-      height: 5000,
-      cell: 8,
-      cooldownMs: 10_000
+    const firebaseConfig = {
+      apiKey: "AIzaSyATSubLFyQuItEzMfW50X_05yPcJKCfXZM",
+      authDomain: "nova-prospect-chat-2-1cb83.firebaseapp.com",
+      projectId: "nova-prospect-chat-2-1cb83",
+      storageBucket: "nova-prospect-chat-2-1cb83.firebasestorage.app",
+      messagingSenderId: "460219250813",
+      appId: "1:460219250813:web:9043a9ae9b76d077b19914"
     };
+    // =======================
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -218,8 +162,8 @@ const firebaseConfig = {
       visiblePixels: new Map(),
       unsubPixels: null,
       redrawPending: false,
-      lastCooldownAt: 0,
-      resubTimer: null
+      resubTimer: null,
+      cooldownUntil: Number(localStorage.getItem(LOCAL_COOLDOWN_KEY) || 0)
     };
 
     const pxKey = (x, y) => `${x},${y}`;
@@ -238,12 +182,12 @@ const firebaseConfig = {
     }
 
     function worldToScreen(x, y) {
-      const cell = WORLD.cell * state.scale;
+      const cell = CELL_SIZE * state.scale;
       return { x: state.panX + x * cell, y: state.panY + y * cell };
     }
 
     function screenToWorld(clientX, clientY) {
-      const cell = WORLD.cell * state.scale;
+      const cell = CELL_SIZE * state.scale;
       return {
         x: Math.floor((clientX - state.panX) / cell),
         y: Math.floor((clientY - state.panY) / cell)
@@ -251,12 +195,12 @@ const firebaseConfig = {
     }
 
     function getViewportBounds() {
-      const cell = WORLD.cell * state.scale;
+      const cell = CELL_SIZE * state.scale;
       return {
         left: Math.max(0, Math.floor((-state.panX) / cell) - 2),
         top: Math.max(0, Math.floor((-state.panY) / cell) - 2),
-        right: Math.min(WORLD.width - 1, Math.ceil((window.innerWidth - state.panX) / cell) + 2),
-        bottom: Math.min(WORLD.height - 1, Math.ceil((window.innerHeight - state.panY) / cell) + 2)
+        right: Math.min(WORLD_WIDTH - 1, Math.ceil((window.innerWidth - state.panX) / cell) + 2),
+        bottom: Math.min(WORLD_HEIGHT - 1, Math.ceil((window.innerHeight - state.panY) / cell) + 2)
       };
     }
 
@@ -272,7 +216,7 @@ const firebaseConfig = {
     function render() {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const cell = WORLD.cell * state.scale;
+      const cell = CELL_SIZE * state.scale;
 
       ctx.fillStyle = "#070b16";
       ctx.fillRect(0, 0, w, h);
@@ -323,7 +267,7 @@ const firebaseConfig = {
       }
 
       const topLeft = worldToScreen(0, 0);
-      const bottomRight = worldToScreen(WORLD.width, WORLD.height);
+      const bottomRight = worldToScreen(WORLD_WIDTH, WORLD_HEIGHT);
       ctx.strokeStyle = "rgba(96,165,250,0.18)";
       ctx.lineWidth = 2;
       ctx.strokeRect(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
@@ -369,19 +313,17 @@ const firebaseConfig = {
 
     function updateHovered(clientX, clientY) {
       const w = screenToWorld(clientX, clientY);
-      const inside = w.x >= 0 && w.y >= 0 && w.x < WORLD.width && w.y < WORLD.height;
+      const inside = w.x >= 0 && w.y >= 0 && w.x < WORLD_WIDTH && w.y < WORLD_HEIGHT;
       state.hovered = inside ? w : null;
       coordsInfo.textContent = inside ? `x: ${w.x} y: ${w.y}` : "x: — y: —";
       requestRender();
     }
 
     function updateCooldownLabel() {
-      if (!state.lastCooldownAt) {
-        cooldownInfo.textContent = "КД: готов";
-        return;
-      }
-      const ms = Math.max(0, state.lastCooldownAt - Date.now());
-      cooldownInfo.textContent = ms > 0 ? `КД: ${(ms / 1000).toFixed(1)}с` : "КД: готов";
+      const msLeft = Math.max(0, state.cooldownUntil - Date.now());
+      cooldownInfo.textContent = msLeft > 0
+        ? `КД: ${(msLeft / 1000).toFixed(1)}с`
+        : "КД: готов";
     }
 
     async function ensureUserDoc() {
@@ -402,17 +344,14 @@ const firebaseConfig = {
     async function placePixel(x, y) {
       if (!state.uid) return;
 
+      if (Date.now() < state.cooldownUntil) return;
+
       const color = colorInput.value;
       const displayName = (nameInput.value || localStorage.getItem("pixel_name") || "").trim().slice(0, 20);
-
-      if (Date.now() < state.lastCooldownAt) return;
-
       const uRef = userDocRef(state.uid);
       const pRef = pixelDocRef(x, y);
 
       try {
-        let placedServerMillis = null;
-
         await runTransaction(db, async (tx) => {
           const userSnap = await tx.get(uRef);
 
@@ -421,8 +360,8 @@ const firebaseConfig = {
             const lastPlacedAt = data.lastPlacedAt;
             if (lastPlacedAt && typeof lastPlacedAt.toMillis === "function") {
               const elapsed = Date.now() - lastPlacedAt.toMillis();
-              if (elapsed < WORLD.cooldownMs) {
-                throw new Error(`COOLDOWN:${WORLD.cooldownMs - elapsed}`);
+              if (elapsed < COOLDOWN_MS) {
+                throw new Error(`COOLDOWN:${COOLDOWN_MS - elapsed}`);
               }
             }
 
@@ -448,22 +387,17 @@ const firebaseConfig = {
           });
         });
 
-        const fresh = await getDoc(uRef);
-        if (fresh.exists()) {
-          const data = fresh.data();
-          if (data.lastPlacedAt && typeof data.lastPlacedAt.toMillis === "function") {
-            placedServerMillis = data.lastPlacedAt.toMillis();
-          }
-        }
-
-        state.lastCooldownAt = (placedServerMillis || Date.now()) + WORLD.cooldownMs;
+        const now = Date.now();
+        state.cooldownUntil = now + COOLDOWN_MS;
+        localStorage.setItem(LOCAL_COOLDOWN_KEY, String(state.cooldownUntil));
         updateCooldownLabel();
         requestRender();
       } catch (err) {
         console.warn(err);
         if (String(err?.message || "").startsWith("COOLDOWN:")) {
           const left = Number(String(err.message).split(":")[1]);
-          state.lastCooldownAt = Date.now() + Math.max(0, left);
+          state.cooldownUntil = Date.now() + Math.max(0, left);
+          localStorage.setItem(LOCAL_COOLDOWN_KEY, String(state.cooldownUntil));
           updateCooldownLabel();
           return;
         }
@@ -496,7 +430,7 @@ const firebaseConfig = {
 
       if (!dragged) {
         const w = screenToWorld(e.clientX, e.clientY);
-        if (w.x >= 0 && w.y >= 0 && w.x < WORLD.width && w.y < WORLD.height) {
+        if (w.x >= 0 && w.y >= 0 && w.x < WORLD_WIDTH && w.y < WORLD_HEIGHT) {
           await placePixel(w.x, w.y);
           scheduleResubscribe();
         }
@@ -519,7 +453,7 @@ const firebaseConfig = {
 
       const worldBefore = screenToWorld(e.clientX, e.clientY);
       state.scale = newScale;
-      const cell = WORLD.cell * state.scale;
+      const cell = CELL_SIZE * state.scale;
       state.panX = e.clientX - worldBefore.x * cell;
       state.panY = e.clientY - worldBefore.y * cell;
 
@@ -529,9 +463,9 @@ const firebaseConfig = {
 
     centerBtn.addEventListener("click", () => {
       state.scale = 1;
-      const cell = WORLD.cell * state.scale;
-      state.panX = (window.innerWidth - WORLD.width * cell) / 2;
-      state.panY = (window.innerHeight - WORLD.height * cell) / 2;
+      const cell = CELL_SIZE * state.scale;
+      state.panX = (window.innerWidth - WORLD_WIDTH * cell) / 2;
+      state.panY = (window.innerHeight - WORLD_HEIGHT * cell) / 2;
       requestRender();
       scheduleResubscribe();
     });
@@ -550,6 +484,7 @@ const firebaseConfig = {
 
     resize();
     centerBtn.click();
+    updateCooldownLabel();
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
