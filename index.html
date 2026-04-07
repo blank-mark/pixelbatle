@@ -96,7 +96,7 @@
 
   <div class="tip">
     <div class="card">
-      ЛКМ — поставить пиксель. Зажми и тяни — перемещение. Колесо — зум. КД меняется в переменной <b>COOLDOWN_MS</b> сверху в коде.
+      ЛКМ — поставить пиксель. Зажми и тяни — перемещение. Колесо — зум. КД задаётся в переменной <b>COOLDOWN_MS</b> сверху в коде.
     </div>
   </div>
 
@@ -111,18 +111,16 @@
       where,
       orderBy,
       onSnapshot,
-      runTransaction,
-      serverTimestamp,
-      getDoc,
-      setDoc
+      setDoc,
+      serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
     // ====== НАСТРОЙКИ ======
-    const COOLDOWN_MS = 10_000; // <-- меняй кд тут
+    const COOLDOWN_MS = 10_000; // 10 секунд
     const WORLD_WIDTH = 5000;
     const WORLD_HEIGHT = 5000;
     const CELL_SIZE = 8;
-    const LOCAL_COOLDOWN_KEY = "pixelbattle:lastPlaceMs:v2";
+    const LOCAL_COOLDOWN_KEY = "pixelbattle:lastPlaceMs:local_only_v1";
     // =======================
 
     const firebaseConfig = {
@@ -148,7 +146,6 @@
     const cooldownInfo = document.getElementById("cooldownInfo");
     const coordsInfo = document.getElementById("coordsInfo");
 
-    const storedCooldown = Number(localStorage.getItem(LOCAL_COOLDOWN_KEY) || 0);
     const state = {
       uid: null,
       scale: 1,
@@ -164,12 +161,11 @@
       unsubPixels: null,
       redrawPending: false,
       resubTimer: null,
-      cooldownUntil: Number.isFinite(storedCooldown) ? storedCooldown : 0
+      cooldownUntil: Number(localStorage.getItem(LOCAL_COOLDOWN_KEY) || 0)
     };
 
     const pxKey = (x, y) => `${x},${y}`;
     const pixelDocId = (x, y) => `${x}_${y}`;
-    const userDocRef = (uid) => doc(db, "users", uid);
     const pixelDocRef = (x, y) => doc(db, "pixels", pixelDocId(x, y));
 
     function resize() {
@@ -327,85 +323,31 @@
         : "КД: готов";
     }
 
-    async function ensureUserDoc() {
-      if (!state.uid) return;
-      const ref = userDocRef(state.uid);
-      const snap = await getDoc(ref);
-      const displayName = (nameInput.value || localStorage.getItem("pixel_name") || "").trim().slice(0, 20);
-
-      if (!snap.exists()) {
-        await setDoc(ref, {
-          createdAt: serverTimestamp(),
-          lastPlacedClientMs: 0,
-          lastPlacedServerAt: serverTimestamp(),
-          displayName
-        });
-      }
-    }
-
     async function placePixel(x, y) {
       if (!state.uid) return;
-
       if (Date.now() < state.cooldownUntil) return;
 
-      const nowMs = Date.now();
       const color = colorInput.value;
       const displayName = (nameInput.value || localStorage.getItem("pixel_name") || "").trim().slice(0, 20);
-      const uRef = userDocRef(state.uid);
       const pRef = pixelDocRef(x, y);
+      const now = Date.now();
 
       try {
-        await runTransaction(db, async (tx) => {
-          const userSnap = await tx.get(uRef);
+        await setDoc(pRef, {
+          x,
+          y,
+          color,
+          uid: state.uid,
+          displayName,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
 
-          if (userSnap.exists()) {
-            const data = userSnap.data();
-            const lastPlacedClientMs = Number(data.lastPlacedClientMs || 0);
-
-            if (lastPlacedClientMs > 0) {
-              const elapsed = nowMs - lastPlacedClientMs;
-              if (elapsed < COOLDOWN_MS) {
-                throw new Error(`COOLDOWN:${COOLDOWN_MS - elapsed}`);
-              }
-            }
-
-            tx.set(uRef, {
-              createdAt: data.createdAt || serverTimestamp(),
-              lastPlacedClientMs: nowMs,
-              lastPlacedServerAt: serverTimestamp(),
-              displayName
-            }, { merge: true });
-          } else {
-            tx.set(uRef, {
-              createdAt: serverTimestamp(),
-              lastPlacedClientMs: nowMs,
-              lastPlacedServerAt: serverTimestamp(),
-              displayName
-            });
-          }
-
-          tx.set(pRef, {
-            x,
-            y,
-            color,
-            uid: state.uid,
-            updatedAt: serverTimestamp()
-          });
-        });
-
-        state.cooldownUntil = nowMs + COOLDOWN_MS;
+        state.cooldownUntil = now + COOLDOWN_MS;
         localStorage.setItem(LOCAL_COOLDOWN_KEY, String(state.cooldownUntil));
         updateCooldownLabel();
         requestRender();
       } catch (err) {
-        console.warn(err);
-        if (String(err?.message || "").startsWith("COOLDOWN:")) {
-          const left = Number(String(err.message).split(":")[1]);
-          state.cooldownUntil = Date.now() + Math.max(0, left);
-          localStorage.setItem(LOCAL_COOLDOWN_KEY, String(state.cooldownUntil));
-          updateCooldownLabel();
-          return;
-        }
+        console.error(err);
         authStatus.innerHTML = '<span class="dot"></span>Не удалось поставить пиксель';
       }
     }
@@ -491,17 +433,10 @@
     centerBtn.click();
     updateCooldownLabel();
 
-    onAuthStateChanged(auth, async (user) => {
+    onAuthStateChanged(auth, (user) => {
       if (!user) return;
       state.uid = user.uid;
       authStatus.innerHTML = '<span class="dot ok"></span>В сети';
-
-      try {
-        await ensureUserDoc();
-      } catch (err) {
-        console.warn(err);
-      }
-
       subscribeToVisiblePixels();
     });
 
@@ -512,4 +447,3 @@
   </script>
 </body>
 </html>
-
