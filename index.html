@@ -2,172 +2,153 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>Pixel Battle</title>
   <style>
-    :root {
-      --bg: #0b1020;
-      --panel: rgba(15, 23, 42, 0.82);
-      --panel2: rgba(30, 41, 59, 0.72);
-      --text: #e5e7eb;
-      --muted: #94a3b8;
-      --accent: #60a5fa;
-      --border: rgba(148,163,184,0.2);
+    :root{
+      --bg:#070b16;
+      --panel:rgba(15,23,42,.82);
+      --panel2:rgba(30,41,59,.72);
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+      --accent:#60a5fa;
+      --border:rgba(148,163,184,.18);
+      --good:#22c55e;
+      --bad:#ef4444;
     }
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: radial-gradient(circle at top, #12203f 0%, #070b16 65%, #04060d 100%);
-      color: var(--text);
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background:radial-gradient(circle at top, #12203f 0%, #070b16 62%, #04060d 100%);
+      color:var(--text);
+      font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
-    #app {
-      position: fixed;
-      inset: 0;
+    canvas{
+      display:block;
+      width:100vw;
+      height:100vh;
+      cursor:crosshair;
+      touch-action:none;
     }
-    canvas {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-      cursor: crosshair;
-      touch-action: none;
+    .hud{
+      position:fixed;
+      inset:14px 14px auto 14px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      z-index:10;
+      pointer-events:none;
     }
-    .hud {
-      position: fixed;
-      left: 14px;
-      top: 14px;
-      right: 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      z-index: 10;
-      pointer-events: none;
+    .card{
+      pointer-events:auto;
+      backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);
+      background:var(--panel);
+      border:1px solid var(--border);
+      box-shadow:0 12px 40px rgba(0,0,0,.32);
+      border-radius:16px;
+      padding:10px 12px;
     }
-    .card {
-      pointer-events: auto;
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      background: var(--panel);
-      border: 1px solid var(--border);
-      box-shadow: 0 12px 40px rgba(0,0,0,.32);
-      border-radius: 16px;
-      padding: 10px 12px;
+    .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .brand{font-weight:800;letter-spacing:.2px}
+    .muted{color:var(--muted);font-size:13px}
+    input[type="text"]{
+      width:150px;
+      border:1px solid var(--border);
+      background:rgba(15,23,42,.75);
+      color:var(--text);
+      border-radius:12px;
+      padding:8px 10px;
+      outline:none;
     }
-    .brand {
-      font-weight: 800;
-      letter-spacing: .2px;
+    input[type="color"]{
+      width:42px;
+      height:36px;
+      border:none;
+      background:transparent;
+      padding:0;
+      cursor:pointer;
     }
-    .row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
+    button{
+      border:1px solid var(--border);
+      background:linear-gradient(180deg, rgba(96,165,250,.18), rgba(96,165,250,.08));
+      color:var(--text);
+      border-radius:12px;
+      padding:8px 12px;
+      cursor:pointer;
     }
-    .muted { color: var(--muted); font-size: 13px; }
-    input[type="text"] {
-      width: 140px;
-      border: 1px solid var(--border);
-      background: rgba(15,23,42,.75);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 8px 10px;
-      outline: none;
+    button:hover{border-color:rgba(96,165,250,.5)}
+    .panel-right{margin-left:auto;max-width:100%}
+    .dot{
+      display:inline-block;
+      width:9px;height:9px;border-radius:999px;
+      background:var(--bad);
+      margin-right:8px;
+      vertical-align:middle;
     }
-    input[type="color"] {
-      width: 42px;
-      height: 36px;
-      border: none;
-      background: transparent;
-      padding: 0;
-      cursor: pointer;
+    .dot.ok{background:var(--good)}
+    .tip{
+      position:fixed;
+      left:14px;
+      bottom:14px;
+      max-width:560px;
+      z-index:10;
+      pointer-events:none;
     }
-    button {
-      border: 1px solid var(--border);
-      background: linear-gradient(180deg, rgba(96,165,250,.18), rgba(96,165,250,.08));
-      color: var(--text);
-      border-radius: 12px;
-      padding: 8px 12px;
-      cursor: pointer;
+    .tip .card{
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.45;
     }
-    button:hover { border-color: rgba(96,165,250,.5); }
-    .status-dot {
-      display: inline-block;
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      background: #ef4444;
-      margin-right: 8px;
-      vertical-align: middle;
-    }
-    .status-dot.ok { background: #22c55e; }
-    .panel-right {
-      margin-left: auto;
-      max-width: 100%;
-    }
-    .tip {
-      position: fixed;
-      left: 14px;
-      bottom: 14px;
-      max-width: 520px;
-      z-index: 10;
-      pointer-events: none;
-    }
-    .tip .card {
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.45;
-    }
-    .kbd {
-      display: inline-block;
-      padding: 1px 6px;
-      border: 1px solid var(--border);
-      border-bottom-width: 2px;
-      border-radius: 8px;
-      color: var(--text);
-      background: rgba(15,23,42,.65);
-      font-size: 12px;
+    .kbd{
+      display:inline-block;
+      padding:1px 6px;
+      border:1px solid var(--border);
+      border-bottom-width:2px;
+      border-radius:8px;
+      color:var(--text);
+      background:rgba(15,23,42,.65);
+      font-size:12px;
     }
   </style>
 </head>
 <body>
-  <div id="app">
-    <canvas id="board"></canvas>
+  <canvas id="board"></canvas>
 
-    <div class="hud">
-      <div class="card row">
-        <div class="brand">Pixel Battle</div>
-        <div class="muted">GitHub Pages + Firebase</div>
-      </div>
-
-      <div class="card row">
-        <label class="row" style="gap:8px;">
-          <span class="muted">Цвет</span>
-          <input id="color" type="color" value="#ff3b7a" />
-        </label>
-
-        <label class="row" style="gap:8px;">
-          <span class="muted">Ник</span>
-          <input id="name" type="text" maxlength="20" placeholder="Марк" />
-        </label>
-
-        <button id="centerBtn" title="Вернуть камеру в центр">В центр</button>
-      </div>
-
-      <div class="card row panel-right">
-        <span id="authStatus"><span class="status-dot"></span>Подключение…</span>
-        <span class="muted" id="cooldownInfo">КД: —</span>
-        <span class="muted" id="coordsInfo">x: — y: —</span>
-      </div>
+  <div class="hud">
+    <div class="card row">
+      <div class="brand">Pixel Battle</div>
+      <div class="muted">GitHub Pages + Firebase</div>
     </div>
 
-    <div class="tip">
-      <div class="card">
-        ЛКМ — поставить пиксель. Зажми и тяни — перемещение. Колесо — зум. На одном аккаунте можно ставить новый пиксель раз в 10 секунд.
-      </div>
+    <div class="card row">
+      <label class="row" style="gap:8px">
+        <span class="muted">Цвет</span>
+        <input id="color" type="color" value="#ff3b7a" />
+      </label>
+
+      <label class="row" style="gap:8px">
+        <span class="muted">Ник</span>
+        <input id="name" type="text" maxlength="20" placeholder="Марк" />
+      </label>
+
+      <button id="centerBtn" title="Вернуть камеру в центр">В центр</button>
+    </div>
+
+    <div class="card row panel-right">
+      <span id="authStatus"><span class="dot"></span>Подключение…</span>
+      <span class="muted" id="cooldownInfo">КД: —</span>
+      <span class="muted" id="coordsInfo">x: — y: —</span>
+    </div>
+  </div>
+
+  <div class="tip">
+    <div class="card">
+      ЛКМ — поставить пиксель. Зажми и тяни — перемещение. Колесо — зум. На одном аккаунте пиксель ставится раз в 10 секунд.
     </div>
   </div>
 
@@ -192,7 +173,7 @@
       setDoc
     } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-    // TODO: вставь сюда свой Firebase config из консоли Firebase.
+    // ВСТАВЬ СЮДА СВОЙ firebaseConfig ИЗ FIREBASE CONSOLE
 const firebaseConfig = {
   apiKey: "AIzaSyATSubLFyQuItEzMfW50X_05yPcJKCfXZM",
   authDomain: "nova-prospect-chat-2-1cb83.firebaseapp.com",
@@ -225,7 +206,6 @@ const firebaseConfig = {
 
     const state = {
       uid: null,
-      userRef: null,
       scale: 1,
       panX: 0,
       panY: 0,
@@ -234,15 +214,12 @@ const firebaseConfig = {
       dragStartY: 0,
       dragPanX: 0,
       dragPanY: 0,
-      mouseX: 0,
-      mouseY: 0,
       hovered: null,
       visiblePixels: new Map(),
       unsubPixels: null,
-      lastCooldownAt: 0,
-      cooldownTimer: null,
       redrawPending: false,
-      resubscribeTimer: null
+      lastCooldownAt: 0,
+      resubTimer: null
     };
 
     const pxKey = (x, y) => `${x},${y}`;
@@ -262,10 +239,7 @@ const firebaseConfig = {
 
     function worldToScreen(x, y) {
       const cell = WORLD.cell * state.scale;
-      return {
-        x: state.panX + x * cell,
-        y: state.panY + y * cell
-      };
+      return { x: state.panX + x * cell, y: state.panY + y * cell };
     }
 
     function screenToWorld(clientX, clientY) {
@@ -278,11 +252,12 @@ const firebaseConfig = {
 
     function getViewportBounds() {
       const cell = WORLD.cell * state.scale;
-      const left = Math.max(0, Math.floor((-state.panX) / cell) - 2);
-      const top = Math.max(0, Math.floor((-state.panY) / cell) - 2);
-      const right = Math.min(WORLD.width - 1, Math.ceil((window.innerWidth - state.panX) / cell) + 2);
-      const bottom = Math.min(WORLD.height - 1, Math.ceil((window.innerHeight - state.panY) / cell) + 2);
-      return { left, top, right, bottom };
+      return {
+        left: Math.max(0, Math.floor((-state.panX) / cell) - 2),
+        top: Math.max(0, Math.floor((-state.panY) / cell) - 2),
+        right: Math.min(WORLD.width - 1, Math.ceil((window.innerWidth - state.panX) / cell) + 2),
+        bottom: Math.min(WORLD.height - 1, Math.ceil((window.innerHeight - state.panY) / cell) + 2)
+      };
     }
 
     function requestRender() {
@@ -297,14 +272,13 @@ const firebaseConfig = {
     function render() {
       const w = window.innerWidth;
       const h = window.innerHeight;
+      const cell = WORLD.cell * state.scale;
 
       ctx.fillStyle = "#070b16";
       ctx.fillRect(0, 0, w, h);
 
-      const cell = WORLD.cell * state.scale;
       const bounds = getViewportBounds();
 
-      // Grid.
       if (cell >= 4) {
         ctx.strokeStyle = "rgba(148,163,184,0.08)";
         ctx.lineWidth = 1;
@@ -328,7 +302,6 @@ const firebaseConfig = {
         }
       }
 
-      // Pixels.
       for (const [key, color] of state.visiblePixels.entries()) {
         const [xStr, yStr] = key.split(",");
         const x = Number(xStr);
@@ -340,7 +313,6 @@ const firebaseConfig = {
         ctx.fillRect(sx, sy, cell, cell);
       }
 
-      // Outline for hovered cell.
       if (state.hovered) {
         const { x, y } = state.hovered;
         const sx = state.panX + x * cell;
@@ -350,7 +322,6 @@ const firebaseConfig = {
         ctx.strokeRect(sx + 0.5, sy + 0.5, cell, cell);
       }
 
-      // Border around world edge.
       const topLeft = worldToScreen(0, 0);
       const bottomRight = worldToScreen(WORLD.width, WORLD.height);
       ctx.strokeStyle = "rgba(96,165,250,0.18)";
@@ -359,10 +330,8 @@ const firebaseConfig = {
     }
 
     function scheduleResubscribe() {
-      clearTimeout(state.resubscribeTimer);
-      state.resubscribeTimer = setTimeout(() => {
-        subscribeToVisiblePixels();
-      }, 180);
+      clearTimeout(state.resubTimer);
+      state.resubTimer = setTimeout(subscribeToVisiblePixels, 180);
     }
 
     function subscribeToVisiblePixels() {
@@ -393,7 +362,7 @@ const firebaseConfig = {
         },
         (err) => {
           console.error(err);
-          authStatus.innerHTML = '<span class="status-dot"></span>Ошибка загрузки пикселей';
+          authStatus.innerHTML = '<span class="dot"></span>Ошибка загрузки пикселей';
         }
       );
     }
@@ -420,6 +389,7 @@ const firebaseConfig = {
       const ref = userDocRef(state.uid);
       const snap = await getDoc(ref);
       const displayName = (nameInput.value || localStorage.getItem("pixel_name") || "").trim().slice(0, 20);
+
       if (!snap.exists()) {
         await setDoc(ref, {
           createdAt: serverTimestamp(),
@@ -434,17 +404,15 @@ const firebaseConfig = {
 
       const color = colorInput.value;
       const displayName = (nameInput.value || localStorage.getItem("pixel_name") || "").trim().slice(0, 20);
-      const now = Date.now();
 
-      if (now < state.lastCooldownAt) {
-        authStatus.innerHTML = `<span class="status-dot"></span>Подожди ${(Math.ceil((state.lastCooldownAt - now) / 100) / 10).toFixed(1)}с`;
-        return;
-      }
+      if (Date.now() < state.lastCooldownAt) return;
 
       const uRef = userDocRef(state.uid);
       const pRef = pixelDocRef(x, y);
 
       try {
+        let placedServerMillis = null;
+
         await runTransaction(db, async (tx) => {
           const userSnap = await tx.get(uRef);
 
@@ -457,6 +425,7 @@ const firebaseConfig = {
                 throw new Error(`COOLDOWN:${WORLD.cooldownMs - elapsed}`);
               }
             }
+
             tx.set(uRef, {
               createdAt: data.createdAt || serverTimestamp(),
               lastPlacedAt: serverTimestamp(),
@@ -479,7 +448,15 @@ const firebaseConfig = {
           });
         });
 
-        state.lastCooldownAt = Date.now() + WORLD.cooldownMs;
+        const fresh = await getDoc(uRef);
+        if (fresh.exists()) {
+          const data = fresh.data();
+          if (data.lastPlacedAt && typeof data.lastPlacedAt.toMillis === "function") {
+            placedServerMillis = data.lastPlacedAt.toMillis();
+          }
+        }
+
+        state.lastCooldownAt = (placedServerMillis || Date.now()) + WORLD.cooldownMs;
         updateCooldownLabel();
         requestRender();
       } catch (err) {
@@ -490,7 +467,7 @@ const firebaseConfig = {
           updateCooldownLabel();
           return;
         }
-        authStatus.innerHTML = '<span class="status-dot"></span>Не удалось поставить пиксель';
+        authStatus.innerHTML = '<span class="dot"></span>Не удалось поставить пиксель';
       }
     }
 
@@ -501,21 +478,15 @@ const firebaseConfig = {
       state.dragStartY = e.clientY;
       state.dragPanX = state.panX;
       state.dragPanY = state.panY;
-      state.mouseX = e.clientX;
-      state.mouseY = e.clientY;
       updateHovered(e.clientX, e.clientY);
     });
 
     canvas.addEventListener("pointermove", (e) => {
-      state.mouseX = e.clientX;
-      state.mouseY = e.clientY;
-
       if (state.dragging && (Math.abs(e.clientX - state.dragStartX) > 3 || Math.abs(e.clientY - state.dragStartY) > 3)) {
         state.panX = state.dragPanX + (e.clientX - state.dragStartX);
         state.panY = state.dragPanY + (e.clientY - state.dragStartY);
         requestRender();
       }
-
       updateHovered(e.clientX, e.clientY);
     });
 
@@ -575,12 +546,6 @@ const firebaseConfig = {
       scheduleResubscribe();
     });
 
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "0") {
-        centerBtn.click();
-      }
-    });
-
     setInterval(updateCooldownLabel, 100);
 
     resize();
@@ -589,8 +554,7 @@ const firebaseConfig = {
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
       state.uid = user.uid;
-      state.userRef = userDocRef(user.uid);
-      authStatus.innerHTML = '<span class="status-dot ok"></span>В сети';
+      authStatus.innerHTML = '<span class="dot ok"></span>В сети';
 
       try {
         await ensureUserDoc();
@@ -603,8 +567,9 @@ const firebaseConfig = {
 
     signInAnonymously(auth).catch((err) => {
       console.error(err);
-      authStatus.innerHTML = '<span class="status-dot"></span>Не удалось войти';
+      authStatus.innerHTML = '<span class="dot"></span>Не удалось войти';
     });
   </script>
 </body>
 </html>
+
